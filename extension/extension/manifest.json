@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "AXIS WebGuard",
+  "version": "1.0.0",
+  "description": "A private, local-first browser page checker.",
+  "minimum_chrome_version": "109",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "action": {
+    "default_title": "AXIS WebGuard",
+    "default_popup": "popup.html"
+  }
+}
