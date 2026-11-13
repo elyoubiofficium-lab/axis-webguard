@@ -1,0 +1,78 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AXIS WebGuard</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main class="app">
+    <header class="header">
+      <div class="brand">
+        <div class="logo">A</div>
+        <div>
+          <div class="brand-name">AXIS WEBGUARD</div>
+          <div class="brand-sub">BROWSER SECURITY CHECK</div>
+        </div>
+      </div>
+      <span class="free-badge">FREE</span>
+    </header>
+
+    <section class="intro">
+      <div class="eyebrow">PRIVATE · LOCAL-FIRST</div>
+      <h1>Check before<br><span>you trust.</span></h1>
+      <p>Review website warning signs before you interact with a page.</p>
+    </section>
+
+    <section class="page-card">
+      <div class="section-label">CURRENT PAGE</div>
+      <div id="pageUrl" class="page-url">Waiting for a page...</div>
+      <div id="status" class="status">READY TO SCAN</div>
+      <button id="scanButton" class="scan-button">Scan this page</button>
+      <p id="message" class="message">Open a regular website in this tab, then scan it.</p>
+    </section>
+
+    <section id="results" class="results" hidden>
+      <div class="result-heading">
+        <div>
+          <div class="section-label">SCAN OVERVIEW</div>
+          <h2>Page assessment</h2>
+        </div>
+        <div id="scanTime" class="scan-time"></div>
+      </div>
+
+      <div class="score-card">
+        <div>
+          <div class="section-label">RISK INDICATOR</div>
+          <div class="score-line">
+            <span id="scoreValue">--</span>
+            <small>/ 100</small>
+          </div>
+          <p id="scoreLabel">Reviewing signals</p>
+        </div>
+        <div id="scoreBadge" class="score-badge">●</div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><span>CONNECTION</span><strong id="connection">--</strong></div>
+        <div class="stat"><span>LINKS</span><strong id="linksCount">--</strong></div>
+        <div class="stat"><span>FORMS</span><strong id="formsCount">--</strong></div>
+      </div>
+
+      <div class="findings">
+        <h3>What we noticed</h3>
+        <div id="findingsList"></div>
+      </div>
+    </section>
+
+    <footer>
+      <strong>Privacy by design.</strong>
+      <p>This version performs checks locally. Page data is not sent to AXIS or an external scanning service.</p>
+      <small>Heuristic checks only · Not an antivirus or a guarantee of safety.</small>
+    </footer>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>
