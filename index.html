@@ -1,0 +1,570 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#071326">
+  <meta name="description" content="AXIS WebGuard is a free, privacy-first Chrome extension that helps you review website warning signs before you interact with a page.">
+  <title>AXIS WebGuard — Browse Safe. Stay Aware.</title>
+
+  <style>
+    :root {
+      --bg: #071326;
+      --panel: #0d1d35;
+      --panel2: #102541;
+      --cyan: #36d5ef;
+      --green: #75edc1;
+      --text: #f4f8ff;
+      --muted: #9aadc5;
+      --border: rgba(150,190,225,.15);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse at 80% 5%, rgba(25,139,190,.16), transparent 34%),
+        radial-gradient(ellipse at 5% 35%, rgba(35,90,160,.14), transparent 35%),
+        var(--bg);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.6;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    .container { width: min(1120px, 90%); margin: auto; }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(7,19,38,.9);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav {
+      min-height: 76px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+    }
+
+    .brand-mark {
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(54,213,239,.5);
+      border-radius: 12px;
+      background: #102a45;
+      color: var(--cyan);
+    }
+
+    .brand-mark svg { width: 25px; height: 25px; }
+    .brand small {
+      display: block;
+      color: var(--muted);
+      font-size: 9px;
+      letter-spacing: 2px;
+      font-weight: 600;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 27px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .nav-links a:hover { color: var(--cyan); }
+
+    .button {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 9px;
+      padding: 12px 19px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 14px;
+      transition: .2s ease;
+      border: 1px solid var(--border);
+    }
+
+    .button-primary {
+      color: #041321;
+      background: linear-gradient(100deg, var(--cyan), var(--green));
+      border: 0;
+      box-shadow: 0 8px 30px rgba(54,213,239,.13);
+    }
+
+    .button:hover { transform: translateY(-2px); }
+    .button-secondary { background: rgba(255,255,255,.04); }
+
+    .hero {
+      padding: 95px 0 80px;
+      display: grid;
+      grid-template-columns: 1.05fr .95fr;
+      align-items: center;
+      gap: 65px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--green);
+      border: 1px solid rgba(117,237,193,.25);
+      background: rgba(117,237,193,.06);
+      border-radius: 30px;
+      padding: 7px 12px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      background: var(--green);
+      border-radius: 50%;
+      box-shadow: 0 0 12px var(--green);
+    }
+
+    h1 {
+      font-size: clamp(42px, 6vw, 69px);
+      line-height: 1.06;
+      letter-spacing: -2.5px;
+      margin: 24px 0 20px;
+    }
+
+    .gradient-text {
+      background: linear-gradient(90deg, var(--cyan), var(--green));
+      color: transparent;
+      background-clip: text;
+      -webkit-background-clip: text;
+    }
+
+    .hero-copy {
+      color: var(--muted);
+      font-size: 17px;
+      max-width: 530px;
+      margin-bottom: 29px;
+    }
+
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+
+    .trust-line {
+      margin-top: 25px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .scanner {
+      position: relative;
+      padding: 25px;
+      border: 1px solid rgba(93,183,220,.23);
+      border-radius: 22px;
+      background: linear-gradient(145deg, rgba(17,43,70,.96), rgba(9,25,46,.97));
+      box-shadow: 0 28px 90px rgba(0,0,0,.3);
+    }
+
+    .scanner-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 1.4px;
+      font-weight: 700;
+    }
+
+    .live { color: var(--green); }
+    .shield {
+      width: 100px;
+      height: 100px;
+      display: grid;
+      place-items: center;
+      margin: 28px auto 18px;
+      border-radius: 28px;
+      color: var(--cyan);
+      background: radial-gradient(circle, rgba(54,213,239,.17), rgba(54,213,239,.025));
+      border: 1px solid rgba(54,213,239,.25);
+      box-shadow: 0 0 50px rgba(54,213,239,.08);
+    }
+
+    .shield svg { width: 56px; height: 56px; }
+    .scanner h3 { text-align: center; margin: 0 0 5px; font-size: 20px; }
+    .scanner-sub { text-align: center; color: var(--muted); font-size: 12px; }
+
+    .fake-result {
+      margin-top: 25px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      background: rgba(3,13,27,.4);
+    }
+
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 0;
+      font-size: 12px;
+    }
+
+    .result-row span:first-child { color: var(--muted); }
+    .result-row span:last-child { color: var(--green); font-weight: 700; }
+
+    .demo-note {
+      margin: 12px 0 0;
+      color: #8298b2;
+      text-align: center;
+      font-size: 10px;
+    }
+
+    section { padding: 75px 0; }
+    .section-heading { max-width: 680px; margin-bottom: 34px; }
+    .section-heading h2 {
+      font-size: clamp(29px, 4vw, 42px);
+      line-height: 1.15;
+      margin: 13px 0;
+    }
+
+    .section-heading p { color: var(--muted); margin: 0; }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 17px;
+    }
+
+    .feature {
+      padding: 23px;
+      min-height: 190px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: linear-gradient(145deg, rgba(17,39,65,.82), rgba(10,26,47,.82));
+    }
+
+    .feature-icon {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      color: var(--cyan);
+      background: rgba(54,213,239,.09);
+      font-size: 20px;
+    }
+
+    .feature h3 { margin: 17px 0 7px; font-size: 16px; }
+    .feature p { margin: 0; color: var(--muted); font-size: 13px; }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .step {
+      padding: 22px;
+      border-left: 2px solid var(--cyan);
+      background: rgba(255,255,255,.025);
+      border-radius: 0 12px 12px 0;
+    }
+
+    .step-number { color: var(--cyan); font-weight: 800; font-size: 12px; }
+    .step h3 { margin: 8px 0; font-size: 17px; }
+    .step p { color: var(--muted); font-size: 13px; margin: 0; }
+
+    .privacy-box {
+      padding: 30px;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 20px;
+      align-items: start;
+      border: 1px solid rgba(117,237,193,.2);
+      background: rgba(117,237,193,.045);
+      border-radius: 18px;
+    }
+
+    .privacy-symbol {
+      color: var(--green);
+      font-size: 30px;
+    }
+
+    .privacy-box h3 { margin: 0 0 8px; }
+    .privacy-box p { color: var(--muted); margin: 0; font-size: 14px; }
+
+    .download-panel {
+      text-align: center;
+      padding: 48px 25px;
+      border: 1px solid rgba(54,213,239,.24);
+      border-radius: 22px;
+      background: radial-gradient(ellipse at top, rgba(54,213,239,.12), transparent 65%), var(--panel);
+    }
+
+    .download-panel h2 { font-size: clamp(29px, 4vw, 42px); margin: 0 0 10px; }
+    .download-panel p { color: var(--muted); max-width: 570px; margin: 0 auto 23px; }
+    .download-note { margin-top: 14px; font-size: 11px; color: #8298b2; }
+
+    .disclaimer {
+      color: #8298b2;
+      font-size: 12px;
+      border-top: 1px solid var(--border);
+      margin-top: 25px;
+      padding-top: 20px;
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 25px 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    @media (max-width: 800px) {
+      .hero { grid-template-columns: 1fr; padding-top: 65px; gap: 40px; }
+      .features, .steps { grid-template-columns: 1fr 1fr; }
+      .nav-links { gap: 13px; }
+    }
+
+    @media (max-width: 560px) {
+      .nav { min-height: 65px; }
+      .nav-links a:not(.button) { display: none; }
+      .features, .steps { grid-template-columns: 1fr; }
+      .hero { padding: 55px 0; }
+      .scanner { padding: 18px; }
+      .privacy-box { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="container nav">
+      <a class="brand" href="#">
+        <span class="brand-mark">
+          <svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
+            <path d="M32 5 53 13v17c0 14-9 24-21 30C20 54 11 44 11 30V13L32 5Z"
+              stroke="currentColor" stroke-width="4"/>
+            <path d="m22 32 7 7 14-16" stroke="#75edc1"
+              stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span>AXIS <small>WEBGUARD</small></span>
+      </a>
+
+      <nav class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#how">How it works</a>
+        <a href="#privacy">Privacy</a>
+        <a class="button button-primary" href="#download">Get it free</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="container hero">
+      <div>
+        <span class="eyebrow"><span class="dot"></span> FREE CHROME SECURITY TOOL</span>
+
+        <h1>Check before<br><span class="gradient-text">you trust.</span></h1>
+
+        <p class="hero-copy">
+          Review website warning signs before you interact with a page.
+          AXIS WebGuard helps make suspicious signals easier to understand,
+          directly from your browser.
+        </p>
+
+        <div class="hero-actions">
+          <a class="button button-primary" href="#download">Get AXIS WebGuard →</a>
+          <a class="button button-secondary" href="#features">Explore features</a>
+        </div>
+
+        <p class="trust-line">FREE &nbsp;·&nbsp; PRIVATE · LOCAL-FIRST &nbsp;·&nbsp; SIMPLE TO USE</p>
+      </div>
+
+      <div class="scanner">
+        <div class="scanner-top">
+          <span>AXIS WEBGUARD SCANNER</span>
+          <span class="live">● LOCAL CHECK</span>
+        </div>
+
+        <div class="shield">
+          <svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
+            <path d="M32 5 53 13v17c0 14-9 24-21 30C20 54 11 44 11 30V13L32 5Z"
+              stroke="currentColor" stroke-width="3"/>
+            <path d="m22 32 7 7 14-16" stroke="#75edc1"
+              stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+
+        <h3>Understand website signals</h3>
+        <div class="scanner-sub">A simple review of selected page characteristics</div>
+
+        <div class="fake-result">
+          <div class="result-row"><span>Connection type</span><span>HTTPS / HTTP</span></div>
+          <div class="result-row"><span>Link patterns</span><span>Reviewed</span></div>
+          <div class="result-row"><span>Page forms</span><span>Reviewed</span></div>
+          <div class="result-row"><span>Analysis</span><span>Local rules</span></div>
+        </div>
+        <p class="demo-note">Illustrative preview · Not a live scan</p>
+      </div>
+    </section>
+
+    <section id="features" class="container">
+      <div class="section-heading">
+        <span class="eyebrow">WHAT IT DOES</span>
+        <h2>Useful signals.<br><span class="gradient-text">Clear explanations.</span></h2>
+        <p>
+          WebGuard reviews selected page and link characteristics
+          and explains why something may deserve a closer look.
+        </p>
+      </div>
+
+      <div class="features">
+        <article class="feature">
+          <div class="feature-icon">⌕</div>
+          <h3>Link review</h3>
+          <p>Highlights selected link patterns, including insecure HTTP links and unusual destinations.</p>
+        </article>
+
+        <article class="feature">
+          <div class="feature-icon">◎</div>
+          <h3>Domain warning signs</h3>
+          <p>Checks for selected suspicious domain patterns and lookalike naming signals.</p>
+        </article>
+
+        <article class="feature">
+          <div class="feature-icon">▤</div>
+          <h3>Form awareness</h3>
+          <p>Reviews page forms for characteristics that may deserve attention, such as insecure submission.</p>
+        </article>
+
+        <article class="feature">
+          <div class="feature-icon">↗</div>
+          <h3>Connection checks</h3>
+          <p>Shows whether the current page uses HTTPS and explains what encryption does and does not mean.</p>
+        </article>
+
+        <article class="feature">
+          <div class="feature-icon">✧</div>
+          <h3>Readable findings</h3>
+          <p>Turns technical signals into simple warnings and practical explanations.</p>
+        </article>
+
+        <article class="feature">
+          <div class="feature-icon">⌂</div>
+          <h3>Local-first approach</h3>
+          <p>The current version performs its checks locally in the browser without sending page data to an AXIS server.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="how" class="container">
+      <div class="section-heading">
+        <span class="eyebrow">HOW IT WORKS</span>
+        <h2>Three simple steps.</h2>
+        <p>No complicated setup. Review the page you are already visiting.</p>
+      </div>
+
+      <div class="steps">
+        <article class="step">
+          <span class="step-number">STEP 01</span>
+          <h3>Open a website</h3>
+          <p>Visit the page you want to review in Google Chrome.</p>
+        </article>
+
+        <article class="step">
+          <span class="step-number">STEP 02</span>
+          <h3>Run a scan</h3>
+          <p>Open the AXIS WebGuard extension and choose the scan action.</p>
+        </article>
+
+        <article class="step">
+          <span class="step-number">STEP 03</span>
+          <h3>Review the findings</h3>
+          <p>Read the signals and explanations before deciding what to do next.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="privacy" class="container">
+      <div class="privacy-box">
+        <div class="privacy-symbol">♢</div>
+        <div>
+          <h3>Privacy matters.</h3>
+          <p>
+            The current version is designed to run its checks locally in Chrome.
+            It does not send the page content to an AXIS scanning server.
+            The extension only requests access to the active tab when you use it.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="download" class="container">
+      <div class="download-panel">
+        <span class="eyebrow">FREE · CHROME EXTENSION</span>
+        <h2>Browse with more awareness.</h2>
+        <p>
+          Get AXIS WebGuard and review selected website warning signs
+          from your browser.
+        </p>
+
+        <a class="button button-primary"
+           href="./downloads/AXIS_WebGuard_v1.0.0.zip"
+           download>
+          Download for Chrome ↓
+        </a>
+
+        <p class="download-note">
+          The download button will work after the extension ZIP is uploaded
+          to the website repository.
+        </p>
+
+        <div class="disclaimer">
+          AXIS WebGuard uses heuristic checks. It is not an antivirus,
+          does not verify every threat, and cannot guarantee that a website is safe.
+          Always use your own judgment before sharing sensitive information.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container footer-inner">
+      <span>© <span id="year"></span> AXIS WebGuard. All rights reserved.</span>
+      <span>Free · Private · Local-first</span>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
