@@ -1,6 +1,12 @@
 
 "use strict";
 
+/*
+ * AXIS WebGuard v1.0.0
+ * Local-first browser page analysis.
+ * No external API or remote scanning service.
+ */
+
 document.addEventListener("DOMContentLoaded", init);
 
 let activeTabId = null;
@@ -18,7 +24,7 @@ async function init() {
 
     const tab = tabs[0];
 
-    if (!tab || !tab.id || !tab.url) {
+    if (!tab || typeof tab.id !== "number" || !tab.url) {
       showUnavailable("No active browser page was found.");
       return;
     }
@@ -28,31 +34,43 @@ async function init() {
 
     if (!/^https?:\/\//i.test(tab.url)) {
       showUnavailable(
-        "Open a regular website beginning with https:// or http://, then try again."
+        "Open a regular website beginning with HTTPS or HTTP, then try again."
       );
       return;
     }
 
     await runScan();
+
   } catch (error) {
-    showUnavailable("Chrome could not access the current tab. Open a normal website and try again.");
+    console.error("AXIS initialization error:", error);
+
+    showUnavailable(
+      "Chrome could not access this tab. Open a regular website and try again."
+    );
   }
 }
+
+/* Display the current website */
 
 function showPage(url) {
   const pageUrl = document.getElementById("pageUrl");
 
   try {
     const parsed = new URL(url);
+
     pageUrl.textContent = parsed.hostname;
     pageUrl.title = url;
+
   } catch {
     pageUrl.textContent = "Current page";
   }
 }
 
+/* Update status */
+
 function setStatus(text, type = "") {
   const status = document.getElementById("status");
+
   status.textContent = text;
   status.className = "status";
 
@@ -60,6 +78,8 @@ function setStatus(text, type = "") {
     status.classList.add(type);
   }
 }
+
+/* Handle unsupported pages */
 
 function showUnavailable(message) {
   setStatus("UNAVAILABLE", "error");
@@ -69,40 +89,53 @@ function showUnavailable(message) {
   document.getElementById("results").hidden = true;
 }
 
+/* Start the scan */
+
 async function runScan() {
-  if (!activeTabId) return;
+  if (activeTabId === null) return;
 
   const button = document.getElementById("scanButton");
   const message = document.getElementById("message");
 
   button.disabled = true;
   button.textContent = "Scanning...";
+
   setStatus("SCANNING", "scanning");
-  message.textContent = "Reviewing selected page signals locally...";
+
+  message.textContent =
+    "Reviewing selected page signals locally...";
 
   try {
     const results = await chrome.scripting.executeScript({
-      target: { tabId: activeTabId },
+      target: {
+        tabId: activeTabId
+      },
       func: scanCurrentPage
     });
 
-    const report = results && results[0] && results[0].result;
+    const report = results?.[0]?.result;
 
     if (!report) {
       throw new Error("No scan report was returned.");
     }
 
     renderReport(report);
+
     setStatus("SCAN COMPLETE");
+
     message.textContent =
       "Scan complete. Page data was not sent to an external scanning service.";
+
   } catch (error) {
-    console.error("AXIS WebGuard scan error:", error);
+    console.error("AXIS scan error:", error);
 
     setStatus("UNAVAILABLE", "error");
+
     message.textContent =
-      "Chrome could not scan this page. Some browser pages and protected pages cannot be inspected.";
+      "Chrome could not scan this page. Protected browser pages cannot be inspected.";
+
     document.getElementById("results").hidden = true;
+
   } finally {
     button.disabled = false;
     button.textContent = "Scan this page again";
@@ -110,15 +143,20 @@ async function runScan() {
 }
 
 /*
- * This function is injected into the active tab by Chrome.
- * Keep its logic self-contained because Chrome serializes it.
+ * This function runs inside the active webpage.
+ * It is self-contained because Chrome injects it into the tab.
  */
+
 function scanCurrentPage() {
   const page = new URL(window.location.href);
+
   const hostname = page.hostname.toLowerCase();
   const isHttps = page.protocol === "https:";
 
-  const links = Array.from(document.querySelectorAll("a[href]"));
+  const links = Array.from(
+    document.querySelectorAll("a[href]")
+  );
+
   const forms = Array.from(document.forms);
 
   let insecureLinks = 0;
@@ -126,6 +164,8 @@ function scanCurrentPage() {
   let shortenedLinks = 0;
   let mixedContent = 0;
   let insecurePasswordForms = 0;
+
+  const findings = [];
 
   const shortenerDomains = [
     "bit.ly",
@@ -142,53 +182,89 @@ function scanCurrentPage() {
     "goo.su"
   ];
 
-  const brandDomains = {
+  const knownBrands = {
     paypal: ["paypal.com"],
-    google: ["google.com", "google.co.uk", "google.ca", "google.co.in"],
+    google: [
+      "google.com",
+      "google.co.uk",
+      "google.ca",
+      "google.co.in"
+    ],
     apple: ["apple.com"],
-    microsoft: ["microsoft.com", "live.com", "outlook.com"],
-    amazon: ["amazon.com", "amazon.co.uk", "amazon.ca", "amazon.de", "amazon.fr"],
-    facebook: ["facebook.com", "fb.com"],
+    microsoft: [
+      "microsoft.com",
+      "live.com",
+      "outlook.com"
+    ],
+    amazon: [
+      "amazon.com",
+      "amazon.co.uk",
+      "amazon.ca",
+      "amazon.de",
+      "amazon.fr"
+    ],
+    facebook: [
+      "facebook.com",
+      "fb.com"
+    ],
     instagram: ["instagram.com"],
     netflix: ["netflix.com"],
     linkedin: ["linkedin.com"]
   };
 
-  const findings = [];
+  /*
+   * Add a finding and preserve its risk points.
+   * This fixes the previous Risk Score calculation issue.
+   */
 
   function addFinding(level, title, description, points = 0) {
-    findings.push({ level, title, description });
-    return points;
-  }
-
-  function isIpAddress(host) {
-    return /^\d{1,3}(\.\d{1,3}){3}$/.test(host);
+    findings.push({
+      level,
+      title,
+      description,
+      points
+    });
   }
 
   function belongsToDomain(host, domain) {
     return host === domain || host.endsWith("." + domain);
   }
 
-  function isShortener(host) {
-    return shortenerDomains.some(domain => belongsToDomain(host, domain));
+  function isIpAddress(host) {
+    return /^\d{1,3}(\.\d{1,3}){3}$/.test(host);
   }
 
-  function hasBrandImpersonation(host) {
+  function isShortener(host) {
+    return shortenerDomains.some(domain =>
+      belongsToDomain(host, domain)
+    );
+  }
+
+  function detectBrandImpersonation(host) {
     const labels = host.split(".");
-    const tokens = labels.flatMap(label => label.split(/[-_]/));
 
-    for (const [brand, allowedDomains] of Object.entries(brandDomains)) {
-      if (!tokens.includes(brand)) continue;
+    const tokens = labels.flatMap(label =>
+      label.split(/[-_]/)
+    );
 
-      const isAllowed = allowedDomains.some(domain =>
+    for (const [brand, allowedDomains] of Object.entries(knownBrands)) {
+      if (!tokens.includes(brand)) {
+        continue;
+      }
+
+      const allowed = allowedDomains.some(domain =>
         belongsToDomain(host, domain)
       );
 
-      if (!isAllowed) return brand;
+      if (!allowed) {
+        return brand;
+      }
     }
 
     return null;
   }
+
+  /* 1. HTTPS connection check */
 
   if (!isHttps) {
     addFinding(
@@ -206,6 +282,8 @@ function scanCurrentPage() {
     );
   }
 
+  /* 2. Punycode detection */
+
   if (hostname.includes("xn--")) {
     addFinding(
       "warning",
@@ -214,6 +292,8 @@ function scanCurrentPage() {
       18
     );
   }
+
+  /* 3. IP address detection */
 
   if (isIpAddress(hostname)) {
     addFinding(
@@ -224,20 +304,27 @@ function scanCurrentPage() {
     );
   }
 
-  const impersonatedBrand = hasBrandImpersonation(hostname);
+  /* 4. Possible brand impersonation */
 
-  if (impersonatedBrand) {
+  const suspiciousBrand = detectBrandImpersonation(hostname);
+
+  if (suspiciousBrand) {
     addFinding(
       "danger",
       "Possible brand impersonation",
-      "The hostname contains the name of " + impersonatedBrand +
+      "The hostname contains the name of " +
+        suspiciousBrand +
         " but does not match the known domain patterns checked by this tool. Verify the address independently.",
       25
     );
   }
 
+  /* 5. Link analysis */
+
   for (const anchor of links) {
-    const rawHref = (anchor.getAttribute("href") || "").trim();
+    const rawHref = (
+      anchor.getAttribute("href") || ""
+    ).trim();
 
     if (
       rawHref === "" ||
@@ -251,47 +338,69 @@ function scanCurrentPage() {
     try {
       const destination = new URL(anchor.href);
 
-      if (isHttps && destination.protocol === "http:") {
+      if (
+        isHttps &&
+        destination.protocol === "http:"
+      ) {
         insecureLinks++;
       }
 
-      if (destination.protocol === "http:" || destination.protocol === "https:") {
+      if (
+        destination.protocol === "http:" ||
+        destination.protocol === "https:"
+      ) {
         if (isShortener(destination.hostname.toLowerCase())) {
           shortenedLinks++;
         }
       }
+
     } catch {
-      // Invalid or unsupported link formats are ignored.
+      // Ignore unsupported link formats.
     }
   }
+
+  /* 6. Insecure links */
 
   if (insecureLinks > 0) {
     addFinding(
       "warning",
-      insecureLinks + " insecure link" + (insecureLinks === 1 ? "" : "s") + " found",
+      insecureLinks +
+        " insecure link" +
+        (insecureLinks === 1 ? "" : "s") +
+        " found",
       "Some links lead to HTTP pages, which do not use an encrypted connection.",
       Math.min(insecureLinks * 5, 15)
     );
   }
 
+  /* 7. Shortened links */
+
   if (shortenedLinks > 0) {
     addFinding(
       "warning",
-      shortenedLinks + " shortened link" + (shortenedLinks === 1 ? "" : "s") + " found",
+      shortenedLinks +
+        " shortened link" +
+        (shortenedLinks === 1 ? "" : "s") +
+        " found",
       "Shortened links hide their final destination. Check where they lead before opening them.",
       Math.min(shortenedLinks * 5, 10)
     );
   }
 
+  /* 8. Placeholder and script links */
+
   if (placeholderLinks > 0) {
     addFinding(
       "info",
-      placeholderLinks + " placeholder or script link" +
+      placeholderLinks +
+        " placeholder or script link" +
         (placeholderLinks === 1 ? "" : "s"),
       "Some links do not point to a normal web address. This is usually a page-quality issue, not proof of a security threat.",
       0
     );
   }
+
+  /* 9. Mixed content */
 
   if (isHttps) {
     const resources = Array.from(
@@ -312,16 +421,25 @@ function scanCurrentPage() {
   if (mixedContent > 0) {
     addFinding(
       "danger",
-      mixedContent + " insecure page resource" +
-        (mixedContent === 1 ? "" : "s") + " found",
+      mixedContent +
+        " insecure page resource" +
+        (mixedContent === 1 ? "" : "s") +
+        " found",
       "This HTTPS page loads some resources over HTTP. These resources may not be protected by the page's encrypted connection.",
       15
     );
   }
 
+  /* 10. Password forms */
+
   for (const form of forms) {
-    const passwordInput = form.querySelector('input[type="password"]');
-    if (!passwordInput) continue;
+    const passwordInput = form.querySelector(
+      'input[type="password"]'
+    );
+
+    if (!passwordInput) {
+      continue;
+    }
 
     let actionUrl;
 
@@ -351,16 +469,17 @@ function scanCurrentPage() {
     );
   }
 
+  /*
+   * Calculate the risk indicator.
+   * This is a heuristic score, not a probability of fraud.
+   */
+
   const score = Math.min(
     100,
-    findings.reduce((total, finding) => {
-      const weights = {
-        danger: 1,
-        warning: 1,
-        info: 1
-      };
-      return total + (finding.points || 0) * weights[finding.level];
-    }, 0)
+    findings.reduce(
+      (total, finding) => total + finding.points,
+      0
+    )
   );
 
   return {
@@ -373,14 +492,22 @@ function scanCurrentPage() {
   };
 }
 
+/* Display scan report */
+
 function renderReport(report) {
   document.getElementById("results").hidden = false;
 
-  document.getElementById("scoreValue").textContent = report.score;
+  document.getElementById("scoreValue").textContent =
+    report.score;
+
   document.getElementById("connection").textContent =
     report.protocol === "https:" ? "HTTPS" : "HTTP";
-  document.getElementById("linksCount").textContent = report.linkCount;
-  document.getElementById("formsCount").textContent = report.formCount;
+
+  document.getElementById("linksCount").textContent =
+    report.linkCount;
+
+  document.getElementById("formsCount").textContent =
+    report.formCount;
 
   const scoreLabel = document.getElementById("scoreLabel");
   const scoreBadge = document.getElementById("scoreBadge");
@@ -390,35 +517,49 @@ function renderReport(report) {
   if (report.score >= 50) {
     scoreLabel.textContent = "Multiple warning signals found";
     scoreBadge.classList.add("danger");
+
   } else if (report.score >= 20) {
     scoreLabel.textContent = "Some warning signals found";
     scoreBadge.classList.add("warning");
+
   } else if (report.score > 0) {
     scoreLabel.textContent = "Few warning signals found";
+
   } else {
-    scoreLabel.textContent = "No warning signals detected by these checks";
+    scoreLabel.textContent =
+      "No warning signals detected by these checks";
   }
 
   const list = document.getElementById("findingsList");
+
   list.replaceChildren();
 
   if (!report.findings.length) {
     const empty = document.createElement("p");
+
     empty.className = "message";
-    empty.textContent = "No findings were returned by the current checks.";
+    empty.textContent =
+      "No findings were returned by the current checks.";
+
     list.appendChild(empty);
+
   } else {
     for (const finding of report.findings) {
       const item = document.createElement("article");
+
       item.className = "finding " + finding.level;
 
       const title = document.createElement("div");
       title.className = "finding-title";
 
       const symbol = document.createElement("span");
+
       symbol.textContent =
-        finding.level === "danger" ? "!" :
-        finding.level === "warning" ? "△" : "i";
+        finding.level === "danger"
+          ? "!"
+          : finding.level === "warning"
+            ? "△"
+            : "i";
 
       const heading = document.createElement("span");
       heading.textContent = finding.title;
